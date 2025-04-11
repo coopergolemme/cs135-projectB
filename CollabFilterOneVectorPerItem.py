@@ -53,12 +53,14 @@ class CollabFilterOneVectorPerItem(AbstractBaseCollabFilterSGD):
 
         # TODO fix the lines below to have right dimensionality & values
         # TIP: use self.n_factors to access number of hidden dimensions
+        print("n_users", n_users)
+        print("n_items", n_items)
         self.param_dict = dict(
-            mu=ag_np.ones(1),
-            b_per_user=ag_np.ones(1), # FIX dimensionality
-            c_per_item=ag_np.ones(1), # FIX dimensionality
-            U=0.001 * random_state.randn(1), # FIX dimensionality
-            V=0.001 * random_state.randn(1), # FIX dimensionality
+            mu=ag_np.ones(1), # do not need to fix this
+            b_per_user=ag_np.ones(n_users), # FIX dimensionality
+            c_per_item=ag_np.ones(n_items), # FIX dimensionality
+            U=0.001 * random_state.randn(n_users, self.n_factors), # FIX dimensionality
+            V=0.001 * random_state.randn(n_items, self.n_factors), # FIX dimensionality
             )
 
 
@@ -82,7 +84,38 @@ class CollabFilterOneVectorPerItem(AbstractBaseCollabFilterSGD):
         '''
         # TODO: Update with actual prediction logic
         N = user_id_N.size
-        yhat_N = ag_np.ones(N)
+
+
+        b_i = b_per_user[user_id_N]
+        c_i = c_per_item[item_id_N]
+
+        # (10_000, )
+        constant = mu + b_i + c_i
+        # (10_000, )
+
+
+        print("constant shape: ", constant.shape)
+
+        print(U.shape)
+        print(V.shape)
+
+        u_for_id = U[user_id_N]
+        v_for_id = V[item_id_N]
+
+
+        print(u_for_id.shape)
+        print(v_for_id.shape)
+        # (10,000, K)
+        # (10,000, K)
+
+
+        dot_products = ag_np.sum(u_for_id * v_for_id, axis=1) 
+
+        print(dot_products.shape)
+        # (10,000, )
+
+        yhat_N = mu + b_i + c_i + dot_products  
+
         return yhat_N
 
 
@@ -118,6 +151,8 @@ if __name__ == '__main__':
         n_epochs=10, batch_size=10000, step_size=0.1,
         n_factors=2, alpha=0.0)
     model.init_parameter_dict(n_users, n_items, train_tuple)
+    # print(model.param_dict)
 
     # Fit the model with SGD
     model.fit(train_tuple, valid_tuple)
+    # model.predict(train_tuple, valid_tuple)
