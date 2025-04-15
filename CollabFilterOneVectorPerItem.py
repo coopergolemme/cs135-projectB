@@ -14,6 +14,8 @@ import autograd.numpy as ag_np
 from AbstractBaseCollabFilterSGD import AbstractBaseCollabFilterSGD
 from train_valid_test_loader import load_train_valid_test_datasets
 
+import matplotlib.pyplot as plt
+
 # Some packages you might need (uncomment as necessary)
 ## import pandas as pd
 ## import matplotlib
@@ -56,11 +58,11 @@ class CollabFilterOneVectorPerItem(AbstractBaseCollabFilterSGD):
         print("n_users", n_users)
         print("n_items", n_items)
         self.param_dict = dict(
-            mu=ag_np.ones(1), # do not need to fix this
-            b_per_user=ag_np.ones(n_users), # FIX dimensionality
-            c_per_item=ag_np.ones(n_items), # FIX dimensionality
-            U=0.001 * random_state.randn(n_users, self.n_factors), # FIX dimensionality
-            V=0.001 * random_state.randn(n_items, self.n_factors), # FIX dimensionality
+            mu=ag_np.ones(10), # do not need to fix this
+            b_per_user=10 + ag_np.ones(n_users), # FIX dimensionality
+            c_per_item=10 + ag_np.ones(n_items), # FIX dimensionality
+            U=random_state.randn(n_users, self.n_factors), # FIX dimensionality
+            V=random_state.randn(n_items, self.n_factors), # FIX dimensionality
             )
 
 
@@ -82,39 +84,17 @@ class CollabFilterOneVectorPerItem(AbstractBaseCollabFilterSGD):
             Scalar predicted ratings, one per provided example.
             Entry n is for the n-th pair of user_id, item_id values provided.
         '''
-        # TODO: Update with actual prediction logic
         N = user_id_N.size
 
 
         b_i = b_per_user[user_id_N]
         c_i = c_per_item[item_id_N]
 
-        # (10_000, )
-        constant = mu + b_i + c_i
-        # (10_000, )
-
-
-        print("constant shape: ", constant.shape)
-
-        print(U.shape)
-        print(V.shape)
-
         u_for_id = U[user_id_N]
         v_for_id = V[item_id_N]
 
-
-        print(u_for_id.shape)
-        print(v_for_id.shape)
-        # (10,000, K)
-        # (10,000, K)
-
-
-        dot_products = ag_np.sum(u_for_id * v_for_id, axis=1) 
-
-        print(dot_products.shape)
-        # (10,000, )
-
-        yhat_N = mu + b_i + c_i + dot_products  
+        yhat_N = mu + b_i + c_i + ag_np.sum(u_for_id * v_for_id, axis=1)   
+        assert yhat_N.shape == (N,)
 
         return yhat_N
 
@@ -132,11 +112,24 @@ class CollabFilterOneVectorPerItem(AbstractBaseCollabFilterSGD):
         -------
         loss : float scalar
         '''
-        # TODO compute loss
-        # TIP: use self.alpha to access regularization strength
+
+        # This is the rating
         y_N = data_tuple[2]
+
+        # This is the rating we predict
         yhat_N = self.predict(data_tuple[0], data_tuple[1], **param_dict)
-        loss_total = 0.0
+
+        sum_square_err = ag_np.sum(ag_np.square(y_N - yhat_N))
+
+
+        regularization = self.alpha * (
+            ag_np.sum(ag_np.square(param_dict['U'])) +
+            ag_np.sum(ag_np.square(param_dict['V']))
+        )
+        
+
+        loss_total = regularization + sum_square_err
+
         return loss_total    
 
 
@@ -145,14 +138,27 @@ if __name__ == '__main__':
     # Load the dataset
     train_tuple, valid_tuple, test_tuple, n_users, n_items = \
         load_train_valid_test_datasets()
+    
     # Create the model and initialize its parameters
     # to have right scale as the dataset (right num users and items)
-    model = CollabFilterOneVectorPerItem(
+    model_k2 = CollabFilterOneVectorPerItem(
         n_epochs=10, batch_size=10000, step_size=0.1,
         n_factors=2, alpha=0.0)
-    model.init_parameter_dict(n_users, n_items, train_tuple)
-    # print(model.param_dict)
+    model_k2.init_parameter_dict(n_users, n_items, train_tuple)
+    model_k2.fit(train_tuple, valid_tuple)
 
-    # Fit the model with SGD
-    model.fit(train_tuple, valid_tuple)
-    # model.predict(train_tuple, valid_tuple)
+    model_k5 = CollabFilterOneVectorPerItem(
+        n_epochs=10, batch_size=10000, step_size=0.1,
+        n_factors=5, alpha=0.0)
+    model_k5.init_parameter_dict(n_users, n_items, train_tuple)
+    model_k5.fit(train_tuple, valid_tuple)
+
+    model_k10 = CollabFilterOneVectorPerItem(
+        n_epochs=10, batch_size=10000, step_size=0.1,
+        n_factors=10, alpha=0.0)
+    model_k10.init_parameter_dict(n_users, n_items, train_tuple)
+    model_k10.fit(train_tuple, valid_tuple)
+
+
+
+
