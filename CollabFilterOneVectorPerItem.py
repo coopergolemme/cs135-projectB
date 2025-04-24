@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 
 # Some packages you might need (uncomment as necessary)
 ## import pandas as pd
+
 ## import matplotlib
 
 # No other imports specific to ML (e.g. scikit) needed!
@@ -53,16 +54,12 @@ class CollabFilterOneVectorPerItem(AbstractBaseCollabFilterSGD):
         '''
         random_state = self.random_state # inherited RandomState object
 
-        # TODO fix the lines below to have right dimensionality & values
-        # TIP: use self.n_factors to access number of hidden dimensions
-        print("n_users", n_users)
-        print("n_items", n_items)
         self.param_dict = dict(
-            mu=ag_np.ones(10), # do not need to fix this
-            b_per_user=10 + ag_np.ones(n_users), # FIX dimensionality
-            c_per_item=10 + ag_np.ones(n_items), # FIX dimensionality
-            U=random_state.randn(n_users, self.n_factors), # FIX dimensionality
-            V=random_state.randn(n_items, self.n_factors), # FIX dimensionality
+            mu=ag_np.mean(train_tuple[2]) * ag_np.ones(1), 
+            b_per_user=ag_np.zeros(n_users), # FIX dimensionality
+            c_per_item=ag_np.zeros(n_items), # FIX dimensionality
+            U=0.001 * random_state.randn(n_users, self.n_factors), # FIX dimensionality
+            V=0.001 * random_state.randn(n_items, self.n_factors), # FIX dimensionality
             )
 
 
